@@ -1,0 +1,82 @@
+package pos
+
+import (
+	"strconv"
+
+	"github.com/ariesandjaya/omnichannel/internal/domain"
+)
+
+// ProductCard renders a single product tile in the POS grid.
+// Touch-optimized with large tap targets (min 80px height).
+// The stock badge element is an SSE OOB-swap target (id="stock-{id}").
+templ ProductCard(p domain.Product) {
+	<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
+		<!-- Product Image -->
+		<div class="relative bg-gray-100 aspect-square overflow-hidden">
+			<img
+				src={ p.ImageOrPlaceholder() }
+				alt={ p.Name }
+				class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+				loading="lazy"
+			/>
+			<!-- Out of stock overlay -->
+			if p.IsOutOfStock() {
+				<div class="absolute inset-0 bg-black/50 flex items-center justify-center">
+					<span class="bg-white text-red-600 text-xs font-bold px-2 py-1 rounded-full">Habis</span>
+				</div>
+			}
+		</div>
+		<!-- Product Info -->
+		<div class="p-3 flex flex-col flex-1 gap-2">
+			<p class="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">{ p.Name }</p>
+			<div class="flex items-center justify-between gap-1 mt-auto">
+				<span class="text-base font-bold text-gray-900">{ p.FormatPrice() }</span>
+				<!-- Stock badge — SSE OOB swap updates this element in real-time -->
+				<span
+					id={ "stock-" + p.ID.String() }
+					class={ "text-xs px-2 py-0.5 rounded-full font-medium", p.StockBadgeClass() }
+				>
+					{ strconv.Itoa(p.StockQuantity) }
+				</span>
+			</div>
+			<!-- Add to cart button -->
+			<button
+				class={
+					"w-full py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 touch-manipulation",
+					templ.KV("bg-indigo-600 text-white hover:bg-indigo-700", !p.IsOutOfStock()),
+					templ.KV("bg-gray-100 text-gray-400 cursor-not-allowed", p.IsOutOfStock()),
+				}
+				hx-post="/api/pos/cart/add"
+				hx-vals={ `{"product_id":"` + p.ID.String() + `","name":"` + p.Name + `","price":` + strconv.FormatInt(p.Price, 10) + `}` }
+				hx-target="#cart-items"
+				hx-swap="innerHTML"
+				hx-indicator="#cart-loading"
+				if p.IsOutOfStock() {
+					disabled
+				}
+			>
+				if p.IsOutOfStock() {
+					Stok Habis
+				} else {
+					+ Tambah
+				}
+			</button>
+		</div>
+	</div>
+}
+
+// ProductGrid renders the full product grid in the POS left panel.
+templ ProductGrid(products []domain.Product) {
+	<div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+		if len(products) == 0 {
+			<div class="col-span-full flex flex-col items-center justify-center py-16 text-gray-400">
+				<svg class="h-16 w-16 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+				<p class="text-sm font-medium">Produk tidak ditemukan</p>
+				<p class="text-xs mt-1">Coba kata kunci yang berbeda</p>
+			</div>
+		}
+		for _, p := range products {
+			@ProductCard(p)
+		}
+	</div>
+}

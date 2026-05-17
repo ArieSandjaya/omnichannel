@@ -1,0 +1,248 @@
+package pages
+
+import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/ariesandjaya/omnichannel/internal/domain"
+	"github.com/ariesandjaya/omnichannel/templates/layouts"
+)
+
+// DashboardProps bundles all data needed to render the admin dashboard.
+type DashboardProps struct {
+	Tenant       *domain.Tenant
+	User         *domain.User
+	Stats        DashboardStats
+	RecentOrders []domain.Order
+	LowStock     []domain.Product
+	Channels     []ChannelStatus
+}
+
+// DashboardStats is the four KPI cards at the top of the dashboard.
+type DashboardStats struct {
+	RevenueToday  string
+	OrdersToday   int
+	TotalProducts int
+	LowStockCount int
+}
+
+// ChannelStatus represents marketplace integration sync state.
+type ChannelStatus struct {
+	Name      string
+	Connected bool
+	LastSync  string
+}
+
+templ Dashboard(p DashboardProps) {
+	@layouts.Dashboard("Dashboard", p.Tenant, p.User, "/dashboard") {
+		<!-- Page heading -->
+		<div class="mb-8">
+			<h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+			<p class="text-sm text-gray-500 mt-1">Selamat datang kembali, { p.User.DisplayName() }</p>
+		</div>
+		<!-- Stats Cards -->
+		<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+			@statsCard("Revenue Hari Ini", p.Stats.RevenueToday, "Pendapatan penjualan", "blue", svgRevenue())
+			@statsCard("Pesanan Hari Ini", strconv.Itoa(p.Stats.OrdersToday)+" pesanan", "Semua channel", "green", svgOrders())
+			@statsCard("Total Produk", strconv.Itoa(p.Stats.TotalProducts)+" produk", "Aktif di semua channel", "purple", svgProducts())
+			@statsCard("Stok Menipis", strconv.Itoa(p.Stats.LowStockCount)+" produk", "Di bawah batas minimum", "red", svgAlert())
+		</div>
+		<!-- Main Grid: Orders + Sidebar panels -->
+		<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+			<!-- Recent Orders Table (2/3 width on xl) -->
+			<div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+				<div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+					<h2 class="text-base font-semibold text-gray-900">Pesanan Terbaru</h2>
+					<a href="/orders" class="text-sm text-indigo-600 font-medium hover:underline">Lihat Semua</a>
+				</div>
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+								<th class="px-6 py-3 text-left">No. Pesanan</th>
+								<th class="px-6 py-3 text-left">Channel</th>
+								<th class="px-6 py-3 text-left">Status</th>
+								<th class="px-6 py-3 text-right">Total</th>
+								<th class="px-6 py-3 text-left">Waktu</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-50">
+							if len(p.RecentOrders) == 0 {
+								<tr>
+									<td colspan="5" class="px-6 py-10 text-center text-sm text-gray-400">
+										Belum ada pesanan hari ini
+									</td>
+								</tr>
+							}
+							for _, order := range p.RecentOrders {
+								<tr class="hover:bg-gray-50 transition-colors">
+									<td class="px-6 py-4">
+										<a href={ templ.SafeURL("/orders/" + order.ID.String()) } class="font-mono text-sm text-indigo-600 hover:underline font-medium">
+											{ order.OrderNumber }
+										</a>
+									</td>
+									<td class="px-6 py-4">
+										<span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600">
+											@channelDot(order.Channel)
+											{ order.ChannelLabel() }
+										</span>
+									</td>
+									<td class="px-6 py-4">
+										<span class={ "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold", order.StatusBadgeClass() }>
+											{ order.StatusLabel() }
+										</span>
+									</td>
+									<td class="px-6 py-4 text-right font-semibold text-gray-900">
+										{ order.FormatTotal() }
+									</td>
+									<td class="px-6 py-4 text-gray-400 text-xs">
+										{ timeAgo(order.CreatedAt) }
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<!-- Right column -->
+			<div class="space-y-6">
+				<!-- Low Stock Alert Panel -->
+				<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+					<div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+						<div class="flex items-center gap-2">
+							<svg class="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+							<h3 class="text-sm font-semibold text-gray-900">Stok Menipis</h3>
+						</div>
+						<a href="/inventory" class="text-xs text-indigo-600 font-medium hover:underline">Kelola</a>
+					</div>
+					<div class="divide-y divide-gray-50">
+						if len(p.LowStock) == 0 {
+							<div class="px-5 py-6 text-center text-sm text-gray-400">
+								Semua stok aman
+							</div>
+						}
+						for _, prod := range p.LowStock {
+							<div class="flex items-center justify-between px-5 py-3">
+								<div class="min-w-0 flex-1">
+									<p class="text-sm font-medium text-gray-900 truncate">{ prod.Name }</p>
+									<p class="text-xs text-gray-500">SKU: { prod.SKU }</p>
+								</div>
+								<span class={ "ml-3 shrink-0 text-xs font-bold px-2 py-0.5 rounded-full", prod.StockBadgeClass() }>
+									{ strconv.Itoa(prod.StockQuantity) } { prod.Unit }
+								</span>
+							</div>
+						}
+					</div>
+				</div>
+				<!-- Channel Status Panel -->
+				<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+					<div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+						<h3 class="text-sm font-semibold text-gray-900">Status Channel</h3>
+						<a href="/channels" class="text-xs text-indigo-600 font-medium hover:underline">Kelola</a>
+					</div>
+					<div class="divide-y divide-gray-50">
+						for _, ch := range p.Channels {
+							<div class="flex items-center gap-3 px-5 py-3">
+								<div class={
+									"h-2 w-2 rounded-full shrink-0",
+									templ.KV("bg-green-400", ch.Connected),
+									templ.KV("bg-gray-300", !ch.Connected),
+								}></div>
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-gray-900">{ ch.Name }</p>
+									<p class="text-xs text-gray-400">{ ch.LastSync }</p>
+								</div>
+								if ch.Connected {
+									<span class="text-xs text-green-600 font-medium">Aktif</span>
+								} else {
+									<a href="/channels" class="text-xs text-indigo-600 font-medium hover:underline">Hubungkan</a>
+								}
+							</div>
+						}
+					</div>
+				</div>
+				<!-- Quick Actions -->
+				<div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white">
+					<h3 class="font-semibold mb-3">Aksi Cepat</h3>
+					<div class="space-y-2">
+						<a href="/pos" class="flex items-center gap-2 text-sm text-white/90 hover:text-white transition-colors">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+							Buka Kasir POS
+						</a>
+						<a href="/products/new" class="flex items-center gap-2 text-sm text-white/90 hover:text-white transition-colors">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+							Tambah Produk Baru
+						</a>
+						<a href="/inventory/adjust" class="flex items-center gap-2 text-sm text-white/90 hover:text-white transition-colors">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+							Sesuaikan Stok
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ statsCard(title, value, subtitle, color, icon string) {
+	<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-start gap-4">
+		<div class={
+			"p-3 rounded-xl shrink-0",
+			templ.KV("bg-blue-50 text-blue-600", color == "blue"),
+			templ.KV("bg-green-50 text-green-600", color == "green"),
+			templ.KV("bg-purple-50 text-purple-600", color == "purple"),
+			templ.KV("bg-red-50 text-red-600", color == "red"),
+		}>
+			@templ.Raw(icon)
+		</div>
+		<div class="min-w-0">
+			<p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{ title }</p>
+			<p class="text-xl font-bold text-gray-900 mt-0.5">{ value }</p>
+			<p class="text-xs text-gray-400 mt-0.5">{ subtitle }</p>
+		</div>
+	</div>
+}
+
+templ channelDot(ch domain.OrderChannel) {
+	switch ch {
+		case domain.ChannelShopee:
+			<span class="h-2 w-2 rounded-full bg-orange-400 inline-block"></span>
+		case domain.ChannelTokopedia:
+			<span class="h-2 w-2 rounded-full bg-green-500 inline-block"></span>
+		case domain.ChannelTikTok:
+			<span class="h-2 w-2 rounded-full bg-pink-500 inline-block"></span>
+		default:
+			<span class="h-2 w-2 rounded-full bg-indigo-400 inline-block"></span>
+	}
+}
+
+func svgRevenue() string {
+	return `<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+}
+
+func svgOrders() string {
+	return `<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`
+}
+
+func svgProducts() string {
+	return `<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`
+}
+
+func svgAlert() string {
+	return `<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
+}
+
+func timeAgo(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "Baru saja"
+	case d < time.Hour:
+		return fmt.Sprintf("%d menit lalu", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%d jam lalu", int(d.Hours()))
+	default:
+		return t.Format("2 Jan 2006")
+	}
+}

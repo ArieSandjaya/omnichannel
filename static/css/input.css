@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* HTMX indicator — hidden by default, shown during requests */
+  .htmx-indicator {
+    display: none;
+  }
+  .htmx-request .htmx-indicator,
+  .htmx-request.htmx-indicator {
+    display: flex;
+  }
+}
+
+@layer utilities {
+  /* CSS custom property helpers for storefront dynamic theming */
+  .bg-primary    { background-color: var(--color-primary, #6366f1); }
+  .bg-secondary  { background-color: var(--color-secondary, #ec4899); }
+  .text-primary  { color: var(--color-primary, #6366f1); }
+  .border-primary { border-color: var(--color-primary, #6366f1); }
+
+  /* POS-specific touch optimization */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+@layer components {
+  /* Storefront primary button — uses CSS var set by tenant theme */
+  .btn-primary {
+    @apply inline-flex items-center justify-center font-semibold rounded-full transition-all active:scale-95;
+    background-color: var(--color-primary, #6366f1);
+    color: white;
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+}
+
+/* Alpine.js x-cloak: hide elements until Alpine initialises */
+[x-cloak] {
+  display: none !important;
+}

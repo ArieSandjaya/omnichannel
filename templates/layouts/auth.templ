@@ -1,0 +1,11 @@
+package layouts
+
+templ Auth(title string) {
+	@Base(title) {
+		<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 py-12 px-4">
+			<div class="w-full max-w-md">
+				{ children... }
+			</div>
+		</div>
+	}
+}

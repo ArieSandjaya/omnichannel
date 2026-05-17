@@ -1,0 +1,12 @@
+package partials
+
+import (
+	"github.com/ariesandjaya/omnichannel/internal/domain"
+	"github.com/ariesandjaya/omnichannel/templates/components/pos"
+)
+
+// ProductSearchResults is an HTMX fragment returned by GET /api/pos/products/search.
+// It replaces the content of #product-grid on the POS page.
+templ ProductSearchResults(products []domain.Product) {
+	@pos.ProductGrid(products)
+}

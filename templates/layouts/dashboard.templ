@@ -1,0 +1,20 @@
+package layouts
+
+import (
+	"github.com/ariesandjaya/omnichannel/internal/domain"
+	"github.com/ariesandjaya/omnichannel/templates/components"
+)
+
+templ Dashboard(title string, tenant *domain.Tenant, user *domain.User, currentPath string) {
+	@Base(title) {
+		<div class="flex h-screen overflow-hidden">
+			@components.Sidebar(tenant, user, currentPath)
+			<div class="flex flex-col flex-1 overflow-hidden min-w-0">
+				@components.Header(tenant, user)
+				<main class="flex-1 overflow-y-auto p-6">
+					{ children... }
+				</main>
+			</div>
+		</div>
+	}
+}

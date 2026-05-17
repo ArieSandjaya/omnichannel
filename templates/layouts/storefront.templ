@@ -1,0 +1,39 @@
+package layouts
+
+import (
+	"fmt"
+
+	"github.com/ariesandjaya/omnichannel/internal/domain"
+)
+
+// Storefront is the base layout for public-facing tenant store pages.
+// It injects CSS custom properties derived from the tenant's theme settings,
+// enabling per-tenant color theming without generating separate CSS files.
+templ Storefront(title string, tenant *domain.Tenant) {
+	<!DOCTYPE html>
+	<html lang="id">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } — { tenant.Name }</title>
+			<link rel="stylesheet" href="/static/css/app.css"/>
+			<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+			<script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+			@templ.Raw(tenantThemeStyle(tenant))
+		</head>
+		<body class="antialiased text-gray-900">
+			{ children... }
+		</body>
+	</html>
+}
+
+// tenantThemeStyle produces a safe <style> block with CSS custom properties.
+// Colors are sanitized by domain.Tenant.GetPrimaryColor() before injection.
+func tenantThemeStyle(tenant *domain.Tenant) string {
+	return fmt.Sprintf(
+		`<style>:root{--color-primary:%s;--color-secondary:%s;--font-family:%s}.btn-primary{background-color:var(--color-primary)}.text-primary{color:var(--color-primary)}.bg-primary{background-color:var(--color-primary)}.border-primary{border-color:var(--color-primary)}</style>`,
+		tenant.GetPrimaryColor(),
+		tenant.GetSecondaryColor(),
+		tenant.GetFontFamily(),
+	)
+}

@@ -1,0 +1,56 @@
+package storefrontcomp
+
+import "github.com/ariesandjaya/omnichannel/internal/domain"
+
+templ ProductCard(p domain.Product) {
+	<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-lg transition-all duration-300 flex flex-col">
+		<!-- Image -->
+		<div class="relative bg-gray-50 aspect-square overflow-hidden">
+			<img
+				src={ p.ImageOrPlaceholder() }
+				alt={ p.Name }
+				class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+				loading="lazy"
+			/>
+			if p.IsOutOfStock() {
+				<div class="absolute top-3 left-3">
+					<span class="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">Habis</span>
+				</div>
+			}
+			if p.IsLowStock() && !p.IsOutOfStock() {
+				<div class="absolute top-3 left-3">
+					<span class="bg-yellow-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">Stok Terbatas</span>
+				</div>
+			}
+		</div>
+		<!-- Info -->
+		<div class="p-4 flex flex-col flex-1 gap-3">
+			<h3 class="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">{ p.Name }</h3>
+			<div class="flex items-center justify-between gap-2 mt-auto">
+				<div>
+					<p class="text-lg font-bold text-gray-900">{ p.FormatPrice() }</p>
+					<p class="text-xs text-gray-500">per { p.Unit }</p>
+				</div>
+				if !p.IsOutOfStock() {
+					<button
+						class="flex items-center gap-1.5 bg-primary text-white text-sm font-semibold px-4 py-2 rounded-full hover:opacity-90 active:scale-95 transition-all"
+						hx-post="/cart/add"
+						hx-vals={ `{"product_id":"` + p.ID.String() + `"}` }
+						hx-target="#cart-count"
+						hx-swap="innerHTML"
+					>
+						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+						Beli
+					</button>
+				} else {
+					<button
+						class="text-sm font-medium px-4 py-2 rounded-full bg-gray-100 text-gray-400 cursor-not-allowed"
+						disabled
+					>
+						Habis
+					</button>
+				}
+			</div>
+		</div>
+	</div>
+}
