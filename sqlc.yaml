@@ -1,6 +1,37 @@
 version: "2"
 sql:
   - engine: "postgresql"
+    queries: "./sql/queries/"
+    schema: "./migrations/"
+    gen:
+      go:
+        package: "sqlcdb"
+        out: "./internal/repository/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: false
+        emit_exact_table_names: false
+        emit_empty_slices: true
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "NullUUID"
+          - db_type: "jsonb"
+            go_type: "[]byte"
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              import: "github.com/jackc/pgx/v5/pgtype"
+              type: "Numeric"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              import: "github.com/jackc/pgx/v5/pgtype"
+              type: "Timestamptz"
     queries: "db/queries/"
     schema: "migrations/"
     gen:
